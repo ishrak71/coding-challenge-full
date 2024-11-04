@@ -1,54 +1,86 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import OverdueOrdersTable from "./components/OverdueOrdersTable";
+import Header from "./components/Header";
+import Pagination from "./components/Pagination";
+import { AppWrapper, OverdueOrder } from "./components/styledComponents";
+import { User, Order, DataRow } from "./types/index";
 
-import styled from "styled-components";
-
-const AppWrapper = styled.div`
-  height: 100vh;
-  width: 100vw;
-  background-color: #cccccc;
-`;
-
-const AppHeader = styled.header`
-  background-color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0rem 2rem;
-`;
-
-const HeaderText = styled.h1`
-  font-family: "Roboto", sans-serif;
-`;
-
-const Username = styled.span`
-  font-family: "Roboto", sans-serif;
-`;
-
-interface User {
-  firstName: string;
-  lastName: string;
-  email: string;
-  id: number;
-}
-
-const App = () => {
+const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [salesData, setSalesData] = useState<Order[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tableData, setTableData] = useState<DataRow[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const rowsPerPage = 5;
 
-  React.useEffect(() => {
-    fetch("http://localhost:8080/user")
-      .then((results) => results.json())
-      .then((data) => {
-        setUser(data);
-      });
-  }, []);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [userResponse, salesResponse] = await Promise.all([
+          fetch("http://localhost:8080/user"),
+          fetch(
+            `http://localhost:8080/sales?limit=${rowsPerPage}&page=${page}`
+          ),
+        ]);
+
+        if (!userResponse.ok || !salesResponse.ok) {
+          throw new Error("Error fetching data");
+        }
+
+        const userData: User = await userResponse.json();
+        const salesData: Order[] = await salesResponse.json();
+
+        setUser(userData);
+        setSalesData(salesData);
+
+        const data: DataRow[] = salesData.map((order) => ({
+          country: order.storeDetails.country,
+          marketplace: order.storeDetails.marketplace,
+          id: order.orderId,
+          name: order.storeDetails.shopName,
+          shipment_status: order.shipment_status,
+          total: order.orderValue,
+          item: order.items,
+          destination: order.destination,
+          date: order.latest_ship_date,
+        }));
+
+        setTableData(data);
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [page]);
+
+  const handleNextPage = () => setPage((prev) => prev + 1);
+  const handlePreviousPage = () =>
+    setPage((prev) => (prev > 1 ? prev - 1 : prev));
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <AppWrapper>
-      <AppHeader>
-        <HeaderText>Analytics Dashboard</HeaderText>
-        <Username>Welcome, {user ? user.firstName : "Guest"}!</Username>
-      </AppHeader>
-      {/** Dashboard - new widgets go here */}
+      <Header user={user} />
+      <OverdueOrder>
+        <h3 style={{ paddingLeft: "16px", paddingTop: "16px" }}>
+          Overdue Orders
+        </h3>
+        <OverdueOrdersTable data={tableData} />
+        <Pagination
+          page={page}
+          onNext={handleNextPage}
+          onPrevious={handlePreviousPage}
+          hasNext={tableData.length === rowsPerPage}
+          rowsPerPage={0}
+        />
+      </OverdueOrder>
     </AppWrapper>
   );
 };

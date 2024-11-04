@@ -6,9 +6,9 @@ test("getUser returns user details", () => {
   };
   getUser(null, res);
   expect(res.json).toHaveBeenCalledWith({
-    firstName: "Jane",
-    lastName: "Doe",
-    email: "janedoe@email.com",
+    firstName: "Ishrak",
+    lastName: "Karim",
+    email: "ishrak71@gmail.com",
     id: 1,
   });
 });

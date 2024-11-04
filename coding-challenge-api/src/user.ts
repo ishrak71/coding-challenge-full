@@ -1,8 +1,8 @@
 export function getUser(req: any, res: any) {
   res.json({
-    firstName: "Jane",
-    lastName: "Doe",
-    email: "janedoe@email.com",
+    firstName: "Ishrak",
+    lastName: "Karim",
+    email: "ishrak71@gmail.com",
     id: 1,
   });
 }
